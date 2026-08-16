@@ -15,7 +15,7 @@ from .exceptions import FileError, FormParserError, MultipartParseError, Queryst
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, Literal, Protocol, TypeAlias, TypedDict
+    from typing import Any, Literal, Protocol, TypedDict
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
@@ -56,7 +56,7 @@ if TYPE_CHECKING:
         MAX_HEADER_COUNT: int
         MAX_HEADER_SIZE: int
 
-    CallbackName: TypeAlias = Literal[
+    CallbackName = Literal[
         "start",
         "data",
         "end",
@@ -406,8 +406,15 @@ class File:
 
         # Split the extension from the filename.
         if file_name is not None:
-            # Extract just the basename to avoid directory traversal
-            basename = os.path.basename(file_name)
+            # Extract just the basename to avoid directory traversal.
+            # On Windows, ntpath decodes bytes paths and raises
+            # UnicodeDecodeError for non-UTF-8 names since Python 3.13,
+            # so split bytes paths manually there (behavior is identical
+            # for well-formed names).
+            if isinstance(file_name, bytes) and os.sep == "\\":
+                basename = file_name.replace(b"\\", b"/").rsplit(b"/", 1)[-1]
+            else:
+                basename = os.path.basename(file_name)
             base, ext = os.path.splitext(basename)
             self._file_base = base
             self._ext = ext

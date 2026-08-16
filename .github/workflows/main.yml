@@ -5,6 +5,7 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:   # manual trigger button on GitHub Actions page
 
 permissions: {}
 
@@ -16,8 +17,9 @@ jobs:
       contents: read
 
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -40,6 +42,17 @@ jobs:
 
       - name: Run rename test
         run: scripts/rename
+
+      - name: Build package
+        if: matrix.python-version == '3.9'
+        run: uv build
+
+      - name: Upload dist
+        if: matrix.python-version == '3.9'   # build once, in this job only
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
   # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
   check:
