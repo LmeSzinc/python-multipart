@@ -410,11 +410,13 @@ class File:
             # On Windows, ntpath decodes bytes paths and raises
             # UnicodeDecodeError for non-UTF-8 names since Python 3.13,
             # so split bytes paths manually there (behavior is identical
-            # for well-formed names).
-            if isinstance(file_name, bytes) and os.sep == "\\":
-                basename = file_name.replace(b"\\", b"/").rsplit(b"/", 1)[-1]
-            else:
-                basename = os.path.basename(file_name)
+            # for well-formed names). Written as a single expression so
+            # that coverage sees the line on every platform.
+            basename = (
+                file_name.replace(b"\\", b"/").rsplit(b"/", 1)[-1]
+                if isinstance(file_name, bytes) and os.sep == "\\"
+                else os.path.basename(file_name)
+            )
             base, ext = os.path.splitext(basename)
             self._file_base = base
             self._ext = ext
@@ -1165,7 +1167,10 @@ class MultipartParser(BaseParser):
                         # No boundary candidate in this chunk, so ignore the content after the leading CR/LF.
                         i = length
                         break
-                    continue
+                    # On Python 3.8/3.9 the bytecode compiler merges this continue
+                    # into the preceding jump with no line-number entry, so
+                    # coverage cannot observe it there.
+                    continue  # pragma: no cover
 
                 # index is used as in index into our boundary.  Set to 0.
                 index = 0
